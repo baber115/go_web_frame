@@ -1,8 +1,11 @@
 package framework
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -80,11 +83,9 @@ func (ctx *Context) QueryInt(key string, def int) int {
 		vlen := len(vals)
 		if vlen > 0 {
 			intval, err := strconv.Atoi(vals[vlen-1])
-			if err != nil {
-				return def
+			if err == nil {
+				return intval
 			}
-
-			return intval
 		}
 	}
 	return def
@@ -98,7 +99,6 @@ func (ctx *Context) QueryString(key string, def string) string {
 			return vals[vlen-1]
 		}
 	}
-
 	return def
 }
 
@@ -107,7 +107,6 @@ func (ctx *Context) QueryArray(key string, def []string) []string {
 	if vals, ok := params[key]; ok {
 		return vals
 	}
-
 	return def
 }
 
@@ -121,7 +120,67 @@ func (ctx *Context) QueryAll() map[string][]string {
 
 // form post
 
+func (ctx *Context) FormInt(key string, def int) int {
+	params := ctx.FormAll()
+	if vals, ok := params[key]; ok {
+		vlen := len(vals)
+		if vlen > 0 {
+			intval, err := strconv.Atoi(vals[vlen-1])
+			if err == nil {
+				return intval
+			}
+		}
+	}
+	return def
+}
+
+func (ctx *Context) FormString(key string, def string) string {
+	params := ctx.FormAll()
+	if vals, ok := params[key]; ok {
+		vlen := len(vals)
+		if vlen > 0 {
+			return vals[vlen-1]
+		}
+	}
+	return def
+}
+
+func (ctx *Context) FormArr(key string, def []string) []string {
+	params := ctx.FormAll()
+	if vals, ok := params[key]; ok {
+		return vals
+	}
+	return def
+}
+
+func (ctx *Context) FormAll() map[string][]string {
+	if ctx.request != nil {
+		return ctx.request.PostForm
+	}
+
+	return map[string][]string{}
+}
+
 // application/json post
+
+func (ctx *Context) BindJson(obj interface{}) error {
+	if ctx.request != nil {
+		body, err := io.ReadAll(ctx.request.Body)
+		if err != nil {
+			return err
+		}
+		ctx.request.Body = io.NopCloser(bytes.NewBuffer(body))
+
+		err = json.Unmarshal(body, obj)
+		if err != nil {
+			return err
+		}
+	} else {
+		return errors.New("ctx.request empty")
+	}
+
+	return nil
+}
 
 // response
 
