@@ -1,4 +1,4 @@
-package web_frame
+package main
 
 import (
 	"net/http"
