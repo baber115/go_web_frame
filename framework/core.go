@@ -1,28 +1,23 @@
 package framework
 
 import (
+	"log"
 	"net/http"
 	"strings"
 )
 
 // Core 框架核心结构
 type Core struct {
-	router map[string]map[string]ControllerHandler
+	router map[string]*Tree
 }
 
 // NewCore 初始化框架核心结构
 func NewCore() *Core {
-	// 二级路由
-	getRouter := map[string]ControllerHandler{}
-	postRouter := map[string]ControllerHandler{}
-	putRouter := map[string]ControllerHandler{}
-	deleteRouter := map[string]ControllerHandler{}
-	// 一级路由
-	router := map[string]map[string]ControllerHandler{}
-	router["GET"] = getRouter
-	router["POST"] = postRouter
-	router["PUT"] = putRouter
-	router["DELETE"] = deleteRouter
+	router := map[string]*Tree{}
+	router["GET"] = NewTree()
+	router["POST"] = NewTree()
+	router["PUT"] = NewTree()
+	router["DELETE"] = NewTree()
 
 	return &Core{
 		router: router,
@@ -34,31 +29,33 @@ func (c *Core) FindRouteByRequest(request *http.Request) ControllerHandler {
 	url := strings.ToUpper(request.URL.Path)
 	method := strings.ToUpper(request.Method)
 	if methodHandlers, ok := c.router[method]; ok {
-		if handler, ok := methodHandlers[url]; ok {
-			return handler
-		}
+		return methodHandlers.FindHandler(url)
 	}
 	return nil
 }
 
 func (c *Core) Get(url string, handler ControllerHandler) {
-	upperUrl := strings.ToUpper(url)
-	c.router["GET"][upperUrl] = handler
+	if err := c.router["GET"].AddRouter(url, handler); err != nil {
+		log.Fatal("add GET router error: ", err)
+	}
 }
 
 func (c *Core) Post(url string, handler ControllerHandler) {
-	upperUrl := strings.ToUpper(url)
-	c.router["POST"][upperUrl] = handler
+	if err := c.router["POST"].AddRouter(url, handler); err != nil {
+		log.Fatal("add POST router error: ", err)
+	}
 }
 
 func (c *Core) Put(url string, handler ControllerHandler) {
-	upperUrl := strings.ToUpper(url)
-	c.router["PUT"][upperUrl] = handler
+	if err := c.router["PUT"].AddRouter(url, handler); err != nil {
+		log.Fatal("add PUT router error: ", err)
+	}
 }
 
 func (c *Core) Delete(url string, handler ControllerHandler) {
-	upperUrl := strings.ToUpper(url)
-	c.router["DELETE"][upperUrl] = handler
+	if err := c.router["DELETE"].AddRouter(url, handler); err != nil {
+		log.Fatal("add DELETE router error: ", err)
+	}
 }
 
 // ServerHTTP 框架核心结构实现Handler接口
