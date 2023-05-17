@@ -9,7 +9,7 @@ func main() {
 	core := framework.NewCore()
 	RegisterRouter(core)
 	server := &http.Server{
-		Handler: framework.NewCore(),
+		Handler: core,
 		Addr:    ":8888",
 	}
 	server.ListenAndServe()

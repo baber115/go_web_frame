@@ -188,7 +188,7 @@ func (ctx *Context) Json(status int, obj interface{}) error {
 	if ctx.HasTimeout() {
 		return nil
 	}
-	ctx.responseWriter.Header().Set("Content-Type", "application/type")
+	ctx.responseWriter.Header().Set("Content-Type", "application/json")
 	ctx.responseWriter.WriteHeader(status)
 	byt, err := json.Marshal(obj)
 	if err != nil {

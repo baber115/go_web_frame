@@ -12,8 +12,8 @@ type Group struct {
 	prefix string
 }
 
-func (c *Core) Group(prefix string) IGroup {
-	return NewGroup(c, prefix)
+func (g *Group) Group(prefix string) IGroup {
+	return NewGroup(g.core, prefix)
 }
 
 func NewGroup(c *Core, prefix string) *Group {
