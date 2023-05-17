@@ -13,22 +13,34 @@ import (
 )
 
 type Context struct {
-	request        *http.Request
-	responseWriter http.ResponseWriter
+	Request        *http.Request
+	ResponseWriter http.ResponseWriter
 
-	ctx        context.Context
-	handler    ControllerHandler
+	ctx context.Context
+	// 当前请求的handler
+	handler    []ControllerHandler
+	index      int // 当前请求调用到调用链的哪个节点
 	hasTimeout bool
 	writeMutex *sync.Mutex
 }
 
 func NewContext(req *http.Request, resWriter http.ResponseWriter) *Context {
 	return &Context{
-		request:        req,
-		responseWriter: resWriter,
+		Request:        req,
+		ResponseWriter: resWriter,
 		ctx:            req.Context(),
 		writeMutex:     &sync.Mutex{},
 	}
+}
+
+func (ctx *Context) Next() error {
+	ctx.index++
+	if ctx.index < len(ctx.handler) {
+		if err := ctx.handler[ctx.index](ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // base function
@@ -38,11 +50,11 @@ func (ctx *Context) WriteMux() *sync.Mutex {
 }
 
 func (ctx *Context) GetRequest() *http.Request {
-	return ctx.request
+	return ctx.Request
 }
 
 func (ctx *Context) GetResponse() http.ResponseWriter {
-	return ctx.responseWriter
+	return ctx.ResponseWriter
 }
 
 func (ctx *Context) SetHasTimeout() {
@@ -56,7 +68,7 @@ func (ctx *Context) HasTimeout() bool {
 // implement context.context
 
 func (ctx *Context) BaseContext() context.Context {
-	return ctx.request.Context()
+	return ctx.Request.Context()
 }
 
 func (ctx *Context) DeadLine() (deadline time.Time, ok bool) {
@@ -111,8 +123,8 @@ func (ctx *Context) QueryArray(key string, def []string) []string {
 }
 
 func (ctx *Context) QueryAll() map[string][]string {
-	if ctx.request != nil {
-		return ctx.request.URL.Query()
+	if ctx.Request != nil {
+		return ctx.Request.URL.Query()
 	}
 
 	return map[string][]string{}
@@ -154,8 +166,8 @@ func (ctx *Context) FormArr(key string, def []string) []string {
 }
 
 func (ctx *Context) FormAll() map[string][]string {
-	if ctx.request != nil {
-		return ctx.request.PostForm
+	if ctx.Request != nil {
+		return ctx.Request.PostForm
 	}
 
 	return map[string][]string{}
@@ -164,12 +176,12 @@ func (ctx *Context) FormAll() map[string][]string {
 // application/json post
 
 func (ctx *Context) BindJson(obj interface{}) error {
-	if ctx.request != nil {
-		body, err := io.ReadAll(ctx.request.Body)
+	if ctx.Request != nil {
+		body, err := io.ReadAll(ctx.Request.Body)
 		if err != nil {
 			return err
 		}
-		ctx.request.Body = io.NopCloser(bytes.NewBuffer(body))
+		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
 		err = json.Unmarshal(body, obj)
 		if err != nil {
@@ -188,16 +200,16 @@ func (ctx *Context) Json(status int, obj interface{}) error {
 	if ctx.HasTimeout() {
 		return nil
 	}
-	ctx.responseWriter.Header().Set("Content-Type", "application/json")
-	ctx.responseWriter.WriteHeader(status)
+	ctx.ResponseWriter.Header().Set("Content-Type", "application/json")
+	ctx.ResponseWriter.WriteHeader(status)
 	byt, err := json.Marshal(obj)
 	if err != nil {
-		ctx.responseWriter.WriteHeader(500)
+		ctx.ResponseWriter.WriteHeader(500)
 		return err
 	}
-	_, err = ctx.responseWriter.Write(byt)
+	_, err = ctx.ResponseWriter.Write(byt)
 	if err != nil {
-		ctx.responseWriter.WriteHeader(500)
+		ctx.ResponseWriter.WriteHeader(500)
 		return err
 	}
 	return nil

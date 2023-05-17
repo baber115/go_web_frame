@@ -1,8 +1,9 @@
-package framework
+package route
 
 import (
 	"errors"
 	"strings"
+	"web_frame/framework"
 )
 
 // 代表树结构
@@ -12,10 +13,10 @@ type Tree struct {
 
 // 代表节点
 type node struct {
-	isLast  bool              // 该节点是否能成为一个独立的uri, 是否自身就是一个终极节点
-	segment string            // uri中的字符串
-	handler ControllerHandler // 控制器
-	childs  []*node           // 子节点
+	isLast  bool                          // 该节点是否能成为一个独立的uri, 是否自身就是一个终极节点
+	segment string                        // uri中的字符串
+	handler []framework.ControllerHandler // 控制器
+	childs  []*node                       // 子节点
 }
 
 func newNode() *node {
@@ -110,7 +111,7 @@ func (n *node) matchNode(uri string) *node {
 /:user/name
 /:user/name/:age (冲突)
 */
-func (tree *Tree) AddRouter(uri string, handler ControllerHandler) error {
+func (tree *Tree) AddRouter(uri string, handler framework.ControllerHandler) error {
 	n := tree.root
 	if n.matchNode(uri) != nil {
 		return errors.New("route exist: " + uri)
@@ -159,7 +160,7 @@ func (tree *Tree) AddRouter(uri string, handler ControllerHandler) error {
 }
 
 // 匹配uri
-func (tree *Tree) FindHandler(uri string) ControllerHandler {
+func (tree *Tree) FindHandler(uri string) framework.ControllerHandler {
 	matchNode := tree.root.matchNode(uri)
 	if matchNode == nil {
 		return nil

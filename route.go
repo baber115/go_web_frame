@@ -1,13 +1,15 @@
 package main
 
 import (
-	"web_frame/framework"
+	"time"
+	"web_frame/framework/middleware"
+	"web_frame/framework/route"
 )
 
-func RegisterRouter(core *framework.Core) {
+func RegisterRouter(core *route.Core) {
 	core.Get("foo", FooControllerHandler)
 	// 静态路由
-	core.Get("/user/login", UserLoginController)
+	core.Get("/user/login", middleware.TimeoutHandler(UserLoginController, time.Second))
 
 	// 路由前缀
 	subjectApi := core.Group("/subject")

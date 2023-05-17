@@ -2,11 +2,11 @@ package main
 
 import (
 	"net/http"
-	"web_frame/framework"
+	"web_frame/framework/route"
 )
 
 func main() {
-	core := framework.NewCore()
+	core := route.NewCore()
 	RegisterRouter(core)
 	server := &http.Server{
 		Handler: core,
