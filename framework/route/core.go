@@ -9,7 +9,8 @@ import (
 
 // Core represent core struct
 type Core struct {
-	router map[string]*Tree // all routers
+	router      map[string]*Tree // all routers
+	middlewares []framework.ControllerHandler
 }
 
 // 初始化core结构
@@ -26,29 +27,34 @@ func NewCore() *Core {
 // === http method wrap
 
 // 匹配GET 方法, 增加路由规则
-func (c *Core) Get(url string, handler framework.ControllerHandler) {
-	if err := c.router["GET"].AddRouter(url, handler); err != nil {
+func (c *Core) Get(url string, handler ...framework.ControllerHandler) {
+	// 把c.middlewares与handler合并
+	allHandlers := append(c.middlewares, handler...)
+	if err := c.router["GET"].AddRouter(url, allHandlers); err != nil {
 		log.Fatal("add router error: ", err)
 	}
 }
 
 // 匹配POST 方法, 增加路由规则
-func (c *Core) Post(url string, handler framework.ControllerHandler) {
-	if err := c.router["POST"].AddRouter(url, handler); err != nil {
+func (c *Core) Post(url string, handler ...framework.ControllerHandler) {
+	allHandlers := append(c.middlewares, handler...)
+	if err := c.router["POST"].AddRouter(url, allHandlers); err != nil {
 		log.Fatal("add router error: ", err)
 	}
 }
 
 // 匹配PUT 方法, 增加路由规则
-func (c *Core) Put(url string, handler framework.ControllerHandler) {
-	if err := c.router["PUT"].AddRouter(url, handler); err != nil {
+func (c *Core) Put(url string, handler ...framework.ControllerHandler) {
+	allHandlers := append(c.middlewares, handler...)
+	if err := c.router["PUT"].AddRouter(url, allHandlers); err != nil {
 		log.Fatal("add router error: ", err)
 	}
 }
 
 // 匹配DELETE 方法, 增加路由规则
-func (c *Core) Delete(url string, handler framework.ControllerHandler) {
-	if err := c.router["DELETE"].AddRouter(url, handler); err != nil {
+func (c *Core) Delete(url string, handler ...framework.ControllerHandler) {
+	allHandlers := append(c.middlewares, handler...)
+	if err := c.router["DELETE"].AddRouter(url, allHandlers); err != nil {
 		log.Fatal("add router error: ", err)
 	}
 }
@@ -59,8 +65,12 @@ func (c *Core) Group(prefix string) IGroup {
 	return NewGroup(c, prefix)
 }
 
+func (c *Core) Use(middlewares ...framework.ControllerHandler) {
+	c.middlewares = append(c.middlewares, middlewares...)
+}
+
 // 匹配路由，如果没有匹配到，返回nil
-func (c *Core) FindRouteByRequest(request *http.Request) framework.ControllerHandler {
+func (c *Core) FindRouteByRequest(request *http.Request) []framework.ControllerHandler {
 	// uri 和 method 全部转换为大写，保证大小写不敏感
 	uri := request.URL.Path
 	method := request.Method
@@ -75,20 +85,20 @@ func (c *Core) FindRouteByRequest(request *http.Request) framework.ControllerHan
 
 // 所有请求都进入这个函数, 这个函数负责路由分发
 func (c *Core) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-
 	// 封装自定义context
 	ctx := framework.NewContext(request, response)
 
 	// 寻找路由
-	router := c.FindRouteByRequest(request)
-	if router == nil {
+	handlers := c.FindRouteByRequest(request)
+	if handlers == nil {
 		// 如果没有找到，这里打印日志
 		ctx.Json(404, "not found")
 		return
 	}
 
+	ctx.SetHandler(handlers)
 	// 调用路由函数，如果返回err 代表存在内部错误，返回500状态码
-	if err := router(ctx); err != nil {
+	if err := ctx.Next(); err != nil {
 		ctx.Json(500, "inner error")
 		return
 	}

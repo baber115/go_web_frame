@@ -1,5 +1,6 @@
 package middleware
 
+import "C"
 import (
 	"context"
 	"fmt"
@@ -26,8 +27,7 @@ func TimeoutHandler(duration time.Duration) framework.ControllerHandler {
 			}()
 
 			// 具体的业务逻辑
-			fun(c)
-
+			c.Next()
 			finishChan <- struct{}{}
 		}()
 		// 执行业务逻辑后的操作

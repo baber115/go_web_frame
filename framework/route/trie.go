@@ -13,17 +13,17 @@ type Tree struct {
 
 // 代表节点
 type node struct {
-	isLast  bool                          // 该节点是否能成为一个独立的uri, 是否自身就是一个终极节点
-	segment string                        // uri中的字符串
-	handler []framework.ControllerHandler // 控制器
-	childs  []*node                       // 子节点
+	isLast   bool                          // 该节点是否能成为一个独立的uri, 是否自身就是一个终极节点
+	segment  string                        // uri中的字符串
+	handlers []framework.ControllerHandler // 控制器
+	children []*node                       // 子节点
 }
 
 func newNode() *node {
 	return &node{
-		isLast:  false,
-		segment: "",
-		childs:  []*node{},
+		isLast:   false,
+		segment:  "",
+		children: []*node{},
 	}
 }
 
@@ -39,18 +39,18 @@ func isWildSegment(segment string) bool {
 
 // 过滤下一层满足segment规则的子节点
 func (n *node) filterChildNodes(segment string) []*node {
-	if len(n.childs) == 0 {
+	if len(n.children) == 0 {
 		return nil
 	}
 
 	// 如果segment是通配符，则所有下一层子节点都满足需求
 	if isWildSegment(segment) {
-		return n.childs
+		return n.children
 	}
 
-	nodes := make([]*node, 0, len(n.childs))
+	nodes := make([]*node, 0, len(n.children))
 	// 过滤所有的下一层子节点
-	for _, cnode := range n.childs {
+	for _, cnode := range n.children {
 		if isWildSegment(cnode.segment) {
 			// 如果下一层子节点有通配符，则满足需求
 			nodes = append(nodes, cnode)
@@ -111,7 +111,7 @@ func (n *node) matchNode(uri string) *node {
 /:user/name
 /:user/name/:age (冲突)
 */
-func (tree *Tree) AddRouter(uri string, handler framework.ControllerHandler) error {
+func (tree *Tree) AddRouter(uri string, handlers []framework.ControllerHandler) error {
 	n := tree.root
 	if n.matchNode(uri) != nil {
 		return errors.New("route exist: " + uri)
@@ -147,9 +147,9 @@ func (tree *Tree) AddRouter(uri string, handler framework.ControllerHandler) err
 			cnode.segment = segment
 			if isLast {
 				cnode.isLast = true
-				cnode.handler = handler
+				cnode.handlers = handlers
 			}
-			n.childs = append(n.childs, cnode)
+			n.children = append(n.children, cnode)
 			objNode = cnode
 		}
 
@@ -160,10 +160,10 @@ func (tree *Tree) AddRouter(uri string, handler framework.ControllerHandler) err
 }
 
 // 匹配uri
-func (tree *Tree) FindHandler(uri string) framework.ControllerHandler {
+func (tree *Tree) FindHandler(uri string) []framework.ControllerHandler {
 	matchNode := tree.root.matchNode(uri)
 	if matchNode == nil {
 		return nil
 	}
-	return matchNode.handler
+	return matchNode.handlers
 }

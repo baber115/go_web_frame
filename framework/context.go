@@ -30,6 +30,7 @@ func NewContext(req *http.Request, resWriter http.ResponseWriter) *Context {
 		ResponseWriter: resWriter,
 		ctx:            req.Context(),
 		writeMutex:     &sync.Mutex{},
+		index:          -1,
 	}
 }
 
@@ -41,6 +42,10 @@ func (ctx *Context) Next() error {
 		}
 	}
 	return nil
+}
+
+func (ctx *Context) SetHandler(handler []ControllerHandler) {
+	ctx.handler = handler
 }
 
 // base function
