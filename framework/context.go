@@ -92,49 +92,6 @@ func (ctx *Context) Value(key interface{}) interface{} {
 	return ctx.BaseContext().Value(key)
 }
 
-// query url
-
-func (ctx *Context) QueryInt(key string, def int) int {
-	params := ctx.QueryAll()
-	if vals, ok := params[key]; ok {
-		vlen := len(vals)
-		if vlen > 0 {
-			intval, err := strconv.Atoi(vals[vlen-1])
-			if err == nil {
-				return intval
-			}
-		}
-	}
-	return def
-}
-
-func (ctx *Context) QueryString(key string, def string) string {
-	params := ctx.QueryAll()
-	if vals, ok := params[key]; ok {
-		vlen := len(vals)
-		if vlen > 0 {
-			return vals[vlen-1]
-		}
-	}
-	return def
-}
-
-func (ctx *Context) QueryArray(key string, def []string) []string {
-	params := ctx.QueryAll()
-	if vals, ok := params[key]; ok {
-		return vals
-	}
-	return def
-}
-
-func (ctx *Context) QueryAll() map[string][]string {
-	if ctx.Request != nil {
-		return ctx.Request.URL.Query()
-	}
-
-	return map[string][]string{}
-}
-
 // form post
 
 func (ctx *Context) FormInt(key string, def int) int {
