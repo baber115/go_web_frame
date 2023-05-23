@@ -1,13 +1,8 @@
 package framework
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -22,6 +17,9 @@ type Context struct {
 	index      int // 当前请求调用到调用链的哪个节点
 	hasTimeout bool
 	writeMutex *sync.Mutex
+
+	// 路由参数
+	params map[string]string
 }
 
 func NewContext(req *http.Request, resWriter http.ResponseWriter) *Context {
@@ -46,6 +44,10 @@ func (ctx *Context) Next() error {
 
 func (ctx *Context) SetHandler(handler []ControllerHandler) {
 	ctx.handler = handler
+}
+
+func (ctx *Context) SetParams(params map[string]string) {
+	ctx.params = params
 }
 
 // base function
@@ -90,97 +92,4 @@ func (ctx *Context) Err() error {
 
 func (ctx *Context) Value(key interface{}) interface{} {
 	return ctx.BaseContext().Value(key)
-}
-
-// form post
-
-func (ctx *Context) FormInt(key string, def int) int {
-	params := ctx.FormAll()
-	if vals, ok := params[key]; ok {
-		vlen := len(vals)
-		if vlen > 0 {
-			intval, err := strconv.Atoi(vals[vlen-1])
-			if err == nil {
-				return intval
-			}
-		}
-	}
-	return def
-}
-
-func (ctx *Context) FormString(key string, def string) string {
-	params := ctx.FormAll()
-	if vals, ok := params[key]; ok {
-		vlen := len(vals)
-		if vlen > 0 {
-			return vals[vlen-1]
-		}
-	}
-	return def
-}
-
-func (ctx *Context) FormArr(key string, def []string) []string {
-	params := ctx.FormAll()
-	if vals, ok := params[key]; ok {
-		return vals
-	}
-	return def
-}
-
-func (ctx *Context) FormAll() map[string][]string {
-	if ctx.Request != nil {
-		return ctx.Request.PostForm
-	}
-
-	return map[string][]string{}
-}
-
-// application/json post
-
-func (ctx *Context) BindJson(obj interface{}) error {
-	if ctx.Request != nil {
-		body, err := io.ReadAll(ctx.Request.Body)
-		if err != nil {
-			return err
-		}
-		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
-
-		err = json.Unmarshal(body, obj)
-		if err != nil {
-			return err
-		}
-	} else {
-		return errors.New("ctx.request empty")
-	}
-
-	return nil
-}
-
-// response
-
-func (ctx *Context) Json(status int, obj interface{}) error {
-	if ctx.HasTimeout() {
-		return nil
-	}
-	ctx.ResponseWriter.Header().Set("Content-Type", "application/json")
-	ctx.ResponseWriter.WriteHeader(status)
-	byt, err := json.Marshal(obj)
-	if err != nil {
-		ctx.ResponseWriter.WriteHeader(500)
-		return err
-	}
-	_, err = ctx.ResponseWriter.Write(byt)
-	if err != nil {
-		ctx.ResponseWriter.WriteHeader(500)
-		return err
-	}
-	return nil
-}
-
-func (ctx *Context) HTML(status int, obj interface{}, template string) error {
-	return nil
-}
-
-func (ctx *Context) Text(status int, obj string) error {
-	return nil
 }

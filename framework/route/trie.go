@@ -17,6 +17,7 @@ type node struct {
 	segment  string                        // uri中的字符串
 	handlers []framework.ControllerHandler // 控制器
 	children []*node                       // 子节点
+	parent   *node
 }
 
 func newNode() *node {
@@ -149,6 +150,7 @@ func (tree *Tree) AddRouter(uri string, handlers []framework.ControllerHandler) 
 				cnode.isLast = true
 				cnode.handlers = handlers
 			}
+			cnode.parent = n
 			n.children = append(n.children, cnode)
 			objNode = cnode
 		}
@@ -166,4 +168,20 @@ func (tree *Tree) FindHandler(uri string) []framework.ControllerHandler {
 		return nil
 	}
 	return matchNode.handlers
+}
+
+// 解析uri为params
+func (n *node) parseParamsFromEndNode(uri string) map[string]string {
+	ret := map[string]string{}
+	segments := strings.Split(uri, "/")
+	segmentsCount := len(segments)
+	cn := n
+	for i := segmentsCount - 1; i >= 0; i-- {
+		if isWildSegment(segments[i]) {
+			ret[cn.segment[1:]] = segments[i]
+		}
+		cn = cn.parent
+	}
+
+	return ret
 }

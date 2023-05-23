@@ -1,6 +1,9 @@
 package framework
 
-import "github.com/spf13/cast"
+import (
+	"github.com/spf13/cast"
+	"strconv"
+)
 
 type IRequest interface {
 	// URL中带的参数
@@ -18,6 +21,10 @@ type IRequest interface {
 	// 例：/book/:id
 
 	// form表单中的参数
+	FormInt(key string, def int) int
+	FormString(key string, def string) string
+	FormArr(key string, def []string) []string
+	FormAll() map[string][]string
 
 	// json body
 
@@ -45,15 +52,15 @@ func (ctx *Context) QueryInt(key string, def int) (int, bool) {
 	return def, false
 }
 
-func (ctx *Context) QueryString(key string, def string) string {
+func (ctx *Context) QueryString(key string, def string) (string, bool) {
 	params := ctx.QueryAll()
 	if vals, ok := params[key]; ok {
 		vlen := len(vals)
 		if vlen > 0 {
-			return vals[vlen-1]
+			return vals[vlen-1], true
 		}
 	}
-	return def
+	return def, false
 }
 
 func (ctx *Context) QueryArray(key string, def []string) []string {
@@ -70,4 +77,68 @@ func (ctx *Context) QueryAll() map[string][]string {
 	}
 
 	return map[string][]string{}
+}
+
+// form post
+
+func (ctx *Context) FormInt(key string, def int) int {
+	params := ctx.FormAll()
+	if vals, ok := params[key]; ok {
+		vlen := len(vals)
+		if vlen > 0 {
+			intval, err := strconv.Atoi(vals[vlen-1])
+			if err == nil {
+				return intval
+			}
+		}
+	}
+	return def
+}
+
+func (ctx *Context) FormString(key string, def string) string {
+	params := ctx.FormAll()
+	if vals, ok := params[key]; ok {
+		vlen := len(vals)
+		if vlen > 0 {
+			return vals[vlen-1]
+		}
+	}
+	return def
+}
+
+func (ctx *Context) FormArr(key string, def []string) []string {
+	params := ctx.FormAll()
+	if vals, ok := params[key]; ok {
+		return vals
+	}
+	return def
+}
+
+func (ctx *Context) FormAll() map[string][]string {
+	if ctx.Request != nil {
+		return ctx.Request.PostForm
+	}
+
+	return map[string][]string{}
+}
+
+// 匹配路由参数
+func (ctx *Context) Param(key string) interface{} {
+	if ctx.params != nil {
+		if val, ok := ctx.params[key]; ok {
+			return val
+		}
+	}
+
+	return nil
+}
+
+// 匹配路由中的变量
+// subject/:id
+func (ctx *Context) ParamInt(key string, def int) (int, bool) {
+	if val := ctx.Param(key); val != nil {
+		return cast.ToInt(val), true
+	}
+
+	return def, false
 }
