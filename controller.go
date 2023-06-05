@@ -21,7 +21,7 @@ func FooControllerHandler(ctx *framework.Context) error {
 			}
 		}()
 		time.Sleep(10 * time.Second)
-		ctx.Json(200, "ok")
+		ctx.SetStatus(200).Json("ok")
 		// 新的 goroutine 结束的时候通过一个 finish 通道告知父 goroutine
 		finish <- struct{}{}
 	}()
@@ -31,13 +31,13 @@ func FooControllerHandler(ctx *framework.Context) error {
 		ctx.WriteMux().Lock()
 		defer ctx.WriteMux().Unlock()
 		fmt.Println(p)
-		ctx.Json(500, "panic")
+		ctx.SetStatus(500).Json("panic")
 	case <-finish:
 		fmt.Println("finish")
 	case <-durationCtx.Done():
 		ctx.WriteMux().Lock()
 		defer ctx.WriteMux().Unlock()
-		ctx.Json(500, "timeout")
+		ctx.SetStatus(500).Json("timeout")
 		ctx.SetHasTimeout()
 	}
 	return nil
