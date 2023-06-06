@@ -1,9 +1,15 @@
 package main
 
-import "web_frame/framework"
+import (
+	"time"
+	"web_frame/framework"
+)
 
 func UserLoginController(c *framework.Context) error {
-	// 打印控制器名字
-	c.SetStatus(200).Json("ok, UserLoginController")
+	foo, _ := c.QueryString("foo", "def")
+	// 等待10秒
+	time.Sleep(time.Second * 10)
+	// 输出结果
+	c.SetStatus(200).Json("ok, UserLoginController: " + foo)
 	return nil
 }
